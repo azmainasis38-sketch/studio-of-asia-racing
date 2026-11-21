@@ -1,0 +1,74 @@
+<!doctype html>
+<html lang="bn">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<title>Studio of Asia Racing</title>
+<style>
+*{box-sizing:border-box}body{margin:0;background:#090f1e;color:#fff;font-family:Arial,sans-serif;display:flex;justify-content:center;min-height:100vh}
+.wrap{width:min(100%,520px);padding:14px}.top{display:flex;justify-content:space-between;align-items:center;margin:4px 0 12px}
+h1{font-size:20px;margin:0;color:#70d8ff}.score{background:#172641;border:1px solid #2d5079;padding:9px 13px;border-radius:12px;font-weight:bold}
+.gamebox{position:relative;border:2px solid #31577e;border-radius:18px;overflow:hidden;background:#111827}
+canvas{display:block;width:100%;height:auto;touch-action:none}
+.overlay{position:absolute;inset:0;background:#07101dcc;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:24px}
+.overlay h2{font-size:28px;margin:0 0 8px;color:#8be2ff}.overlay p{line-height:1.5;color:#d5e6f6}
+button{border:0;border-radius:12px;padding:12px 18px;font-weight:bold;font-size:16px;background:#24b8ed;color:#041321;cursor:pointer}
+.controls{display:flex;justify-content:center;gap:24px;padding:14px}
+.controls button{width:100px;background:#1a3150;color:white;border:1px solid #426b98;font-size:24px;touch-action:none}
+.hint{text-align:center;color:#9db3ca;font-size:13px;margin:0 0 10px}
+</style>
+</head>
+<body>
+<div class="wrap">
+ <div class="top"><h1>🏁 STUDIO OF ASIA RACING</h1><div class="score">স্কোর: <span id="score">0</span></div></div>
+ <p class="hint">গাড়ি চালাতে ← → চাপো অথবা নিচের বোতাম ব্যবহার করো</p>
+ <div class="gamebox">
+  <canvas id="game" width="480" height="700" aria-label="রেসিং গেম"></canvas>
+  <div class="overlay" id="overlay">
+   <h2>READY, RACER?</h2><p>অন্য গাড়িগুলো এড়িয়ে যতদূর পারো এগিয়ে যাও!</p><button id="start">গেম শুরু করো</button>
+  </div>
+ </div>
+ <div class="controls"><button id="left" aria-label="বামে">◀</button><button id="right" aria-label="ডানে">▶</button></div>
+ <p class="hint">কম্পিউটারে Arrow keys • ফোনে বোতাম চাপো</p>
+</div>
+<script>
+const c=document.getElementById('game'),ctx=c.getContext('2d'),scoreEl=document.getElementById('score'),overlay=document.getElementById('overlay');
+const W=c.width,H=c.height,lanes=[150,240,330];let player=1,traffic=[],score=0,speed=5,frame=0,running=false,raf=0;
+function car(x,y,color,playerCar=false){
+ ctx.fillStyle=color;ctx.beginPath();ctx.roundRect(x-23,y-42,46,84,10);ctx.fill();
+ ctx.fillStyle=playerCar?'#d8f5ff':'#222';ctx.fillRect(x-17,y-27,34,25);
+ ctx.fillStyle='#ffe7a6';ctx.fillRect(x-17,y-38,9,6);ctx.fillRect(x+8,y-38,9,6);
+ ctx.fillStyle='#101827';ctx.fillRect(x-27,y-26,6,18);ctx.fillRect(x+21,y-26,6,18);ctx.fillRect(x-27,y+18,6,18);ctx.fillRect(x+21,y+18,6,18);
+}
+function drawRoad(){
+ ctx.fillStyle='#176044';ctx.fillRect(0,0,W,H);ctx.fillStyle='#343b48';ctx.fillRect(75,0,330,H);
+ ctx.fillStyle='#f5f0cf';ctx.fillRect(85,0,5,H);ctx.fillRect(395,0,5,H);
+ ctx.strokeStyle='#e6e8ed';ctx.lineWidth=5;ctx.setLineDash([34,30]);
+ ctx.lineDashOffset=-(frame*speed)%64;ctx.beginPath();ctx.moveTo(185,0);ctx.lineTo(185,H);ctx.moveTo(295,0);ctx.lineTo(295,H);ctx.stroke();ctx.setLineDash([]);
+}
+function draw(){
+ drawRoad();traffic.forEach(t=>car(lanes[t.lane],t.y,t.color));
+ car(lanes[player],H-105,'#16b8f2',true);
+}
+function endGame(){
+ running=false;cancelAnimationFrame(raf);overlay.style.display='flex';
+ overlay.innerHTML='<h2>RACE OVER!</h2><p>তোমার স্কোর: <b>'+score+'</b><br>আবার চেষ্টা করবে?</p><button id="again">আবার খেলো</button>';
+ document.getElementById('again').onclick=startGame;
+}
+function loop(){
+ if(!running)return;frame++;if(frame%48===0){let lane=Math.floor(Math.random()*3);traffic.push({lane,y:-60,color:['#ff5b67','#ffbd4a','#a78bfa'][Math.floor(Math.random()*3)]});}
+ traffic.forEach(t=>t.y+=speed);traffic=traffic.filter(t=>t.y<H+70);
+ for(const t of traffic){if(t.lane===player&&t.y>H-155&&t.y<H-35){endGame();return;}}
+ if(frame%12===0){score++;scoreEl.textContent=score;if(score%10===0)speed=Math.min(10,speed+.35);}
+ draw();raf=requestAnimationFrame(loop);
+}
+function startGame(){cancelAnimationFrame(raf);player=1;traffic=[];score=0;speed=5;frame=0;scoreEl.textContent='0';overlay.style.display='none';running=true;draw();loop();}
+function move(d){if(running)player=Math.max(0,Math.min(2,player+d));}
+document.getElementById('start').onclick=startGame;
+document.getElementById('left').addEventListener('pointerdown',e=>{e.preventDefault();move(-1)});
+document.getElementById('right').addEventListener('pointerdown',e=>{e.preventDefault();move(1)});
+document.addEventListener('keydown',e=>{if(e.key==='ArrowLeft'){e.preventDefault();move(-1)}if(e.key==='ArrowRight'){e.preventDefault();move(1)}if(e.key==='Enter'&&!running)startGame()});
+draw();
+</script>
+</body>
+</html>
